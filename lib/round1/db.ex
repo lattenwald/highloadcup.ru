@@ -138,7 +138,7 @@ defmodule Round1.Db.Visits do
       is_nil(Db.get(:users, user_id)) -> nil
 
       true ->
-        visits = get_visits(user_id)
+        get_visits(user_id)
         |> Stream.map(fn visit ->
           loc = Db.get(:locations, visit.location)
           %{visit | location: loc}
