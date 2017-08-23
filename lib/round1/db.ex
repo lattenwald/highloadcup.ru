@@ -25,7 +25,6 @@ defmodule Round1.Db do
   end
 
   def update(type, id, json) do
-    Logger.debug "#{__MODULE__} update #{type}/#{id} #{inspect json}"
     Agent.get_and_update(
       __MODULE__,
       fn state ->
@@ -45,13 +44,22 @@ defmodule Round1.Db do
          end
   end
 
-  def insert(type, json) do
+  def insert(type, id, data) do
+    if get(type, id) do
+      :error
+    else
+      load_data(type, [data])
+      if type == :visits do
+        Round1.Db.Visits.add_visit(data)
+        Round1.Db.Avg.add_visit(data)
+      end
+      :ok
+    end
   end
 
   defp merge(nil, _), do: nil
   defp merge(_, %{"id" => _}), do: :error
   defp merge(old, new) do
-    Logger.debug "old: #{inspect old}, new: #{inspect new}"
     try do
       Enum.reduce(
         new, old,
@@ -71,7 +79,6 @@ defmodule Round1.Db do
     for file <- File.ls!(dirname),
       Path.extname(file) == ".json",
       file = Path.join(dirname, file) do
-        Logger.debug file
         if File.dir?(file) do
           load_dir(file)
         else

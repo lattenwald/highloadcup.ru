@@ -30,13 +30,13 @@ defmodule Round1.Handler do
   get "/users/:id/visits", do: conn |> fetch_visits()
   get "/locations/:id/avg", do: conn |> fetch_avg()
 
-  post "/users/:id", do: conn |> update(:users)
-  post "/locations/:id", do: conn |> update(:locations)
-  post "/visits/:id", do: conn |> update(:visits)
-
   post "/users/new", do: conn |> insert(:users)
   post "/locations/new", do: conn |> insert(:locations)
   post "/visits/new", do: conn |> insert(:visits)
+
+  post "/users/:id", do: conn |> update(:users)
+  post "/locations/:id", do: conn |> update(:locations)
+  post "/visits/:id", do: conn |> update(:visits)
 
   match _, do: not_found(conn)
 
@@ -74,12 +74,16 @@ defmodule Round1.Handler do
   end
 
   defp insert(conn, type) do
-    case Db.insert(type, conn.body_params) do
-      :ok ->
+    with {:ok, entity} <- Round1.Validate.validate_new(type, conn.body_params) do
+      case Db.insert(type, entity.id, entity) do
+        :ok ->
           conn
           |> Plug.Conn.put_resp_content_type("application/json")
           |> Plug.Conn.send_resp(200, "{}")
 
+        _ -> bad_request(conn)
+      end
+    else
       _ -> bad_request(conn)
     end
   end
