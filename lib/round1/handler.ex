@@ -7,7 +7,7 @@ defmodule Round1.Handler do
   @port Application.get_env(:round1, :port, 80)
 
   plug Plug.Logger
-  plug Plug.Parsers, parsers: [:json], json_decoder: Poison
+  plug Plug.Parsers, parsers: [:json], pass: ["*/*"], json_decoder: Poison
   plug :match
   plug :dispatch
 
@@ -27,9 +27,16 @@ defmodule Round1.Handler do
   get "/users/:id", do: conn |> fetch(:users)
   get "/locations/:id", do: conn |> fetch(:locations)
   get "/visits/:id", do: conn |> fetch(:visits)
-
   get "/users/:id/visits", do: conn |> fetch_visits()
   get "/locations/:id/avg", do: conn |> fetch_avg()
+
+  post "/users/:id", do: conn |> update(:users)
+  post "/locations/:id", do: conn |> update(:locations)
+  post "/visits/:id", do: conn |> update(:visits)
+
+  post "/users/new", do: conn |> insert(:users)
+  post "/locations/new", do: conn |> insert(:locations)
+  post "/visits/new", do: conn |> insert(:visits)
 
   match _, do: not_found(conn)
 
@@ -48,6 +55,32 @@ defmodule Round1.Handler do
         end
 
       _ -> not_found(conn)
+    end
+  end
+
+  defp update(conn, type) do
+    with {id, ""} <- Integer.parse(conn.params["id"]) do
+      case Db.update(type, id, conn.body_params) do
+        nil -> not_found(conn)
+        :error -> bad_request(conn)
+        :ok ->
+          conn
+          |> Plug.Conn.put_resp_content_type("application/json")
+          |> Plug.Conn.send_resp(200, "{}")
+      end
+    else
+      _ -> bad_request(conn)
+    end
+  end
+
+  defp insert(conn, type) do
+    case Db.insert(type, conn.body_params) do
+      :ok ->
+          conn
+          |> Plug.Conn.put_resp_content_type("application/json")
+          |> Plug.Conn.send_resp(200, "{}")
+
+      _ -> bad_request(conn)
     end
   end
 
