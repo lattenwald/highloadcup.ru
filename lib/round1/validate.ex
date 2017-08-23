@@ -17,12 +17,11 @@ defmodule Round1.Validate do
      place: &is_binary/1]
   end
 
-  def validate_new(type, json) do
+  def validate_update(type, json) do
     try do
       keys = Map.keys(json) |> Enum.map(&String.to_existing_atom/1)
       schema = schema(type)
-      schema_keys = Keyword.keys(schema) |> Enum.sort
-      if Enum.sort(keys) != schema_keys, do: throw :error
+      schema_keys = Keyword.keys(schema)
 
       json
       |> Enum.map(fn {k, v} ->
@@ -34,6 +33,36 @@ defmodule Round1.Validate do
         {k, v}
       end)
       |> Enum.into(%{})
+    rescue
+      _ -> :error
+    catch
+      _ -> :error
+    else
+      new -> {:ok, new}
+    end
+  end
+
+  def validate_new(type, json) do
+    try do
+      keys = Map.keys(json) |> Enum.map(&String.to_existing_atom/1)
+      schema = schema(type)
+      schema_keys = Keyword.keys(schema) |> Enum.sort
+      if Enum.sort(keys) != schema_keys, do: throw :error
+
+      Logger.debug "schema: #{inspect schema}"
+
+      json
+      |> Enum.map(fn {k, v} ->
+        k = String.to_existing_atom k
+        if not schema[k].(v) do
+          Logger.debug "failed validation for key #{k}"
+          throw :error
+        end
+        {k, v}
+      end)
+      |> Enum.into(%{})
+    rescue
+      _ -> :error
     catch
       _ -> :error
     else

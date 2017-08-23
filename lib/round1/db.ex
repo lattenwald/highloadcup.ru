@@ -39,6 +39,7 @@ defmodule Round1.Db do
            {:ok, :visits, old, new} ->
              Round1.Db.Visits.update(old, new)
              Round1.Db.Avg.update(old, new)
+             :ok
            {:ok, _, _, _} -> :ok
            other -> other
          end

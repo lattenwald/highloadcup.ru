@@ -7,7 +7,6 @@ defmodule Round1.Handler do
   @port Application.get_env(:round1, :port, 80)
 
   plug Plug.Logger
-  plug Plug.Parsers, parsers: [:json], pass: ["*/*"], json_decoder: Poison
   plug :match
   plug :dispatch
 
@@ -24,19 +23,19 @@ defmodule Round1.Handler do
 
   get "/", do: Plug.Conn.send_resp(conn, 200, "")
 
-  get "/users/:id", do: conn |> fetch(:users)
-  get "/locations/:id", do: conn |> fetch(:locations)
-  get "/visits/:id", do: conn |> fetch(:visits)
-  get "/users/:id/visits", do: conn |> fetch_visits()
-  get "/locations/:id/avg", do: conn |> fetch_avg()
+  get "/users/:id",         do: conn |> fetch_query_params |> fetch(:users)
+  get "/locations/:id",     do: conn |> fetch_query_params |> fetch(:locations)
+  get "/visits/:id",        do: conn |> fetch_query_params |> fetch(:visits)
+  get "/users/:id/visits",  do: conn |> fetch_query_params |> fetch_visits()
+  get "/locations/:id/avg", do: conn |> fetch_query_params |> fetch_avg()
 
-  post "/users/new", do: conn |> insert(:users)
+  post "/users/new",     do: conn |> insert(:users)
   post "/locations/new", do: conn |> insert(:locations)
-  post "/visits/new", do: conn |> insert(:visits)
+  post "/visits/new",    do: conn |> insert(:visits)
 
-  post "/users/:id", do: conn |> update(:users)
+  post "/users/:id",     do: conn |> update(:users)
   post "/locations/:id", do: conn |> update(:locations)
-  post "/visits/:id", do: conn |> update(:visits)
+  post "/visits/:id",    do: conn |> update(:visits)
 
   match _, do: not_found(conn)
 
@@ -58,9 +57,20 @@ defmodule Round1.Handler do
     end
   end
 
+  defp fetch_body({:ok, data, _conn}, acc), do: {:ok, acc <> data}
+  defp fetch_body({:more, data, conn}, acc), do: fetch_body(conn, acc <> data)
+  defp fetch_body(err={:error, _}), do: err
+  defp fetch_body(conn) do
+    Plug.Conn.read_body(conn, length: 1_000_000)
+    |> fetch_body("")
+  end
+
   defp update(conn, type) do
-    with {id, ""} <- Integer.parse(conn.params["id"]) do
-      case Db.update(type, id, conn.body_params) do
+    with {id, ""} <- Integer.parse(conn.params["id"]),
+         {:ok, body} <- fetch_body(conn),
+         {:ok, json} <- Poison.decode(body),
+         {:ok, entity} <- Round1.Validate.validate_update(type, json) do
+      case Db.update(type, id, json) do
         nil -> not_found(conn)
         :error -> bad_request(conn)
         :ok ->
@@ -74,7 +84,9 @@ defmodule Round1.Handler do
   end
 
   defp insert(conn, type) do
-    with {:ok, entity} <- Round1.Validate.validate_new(type, conn.body_params) do
+    with {:ok, body} <- fetch_body(conn),
+         {:ok, json} <- Poison.decode(body),
+         {:ok, entity} <- Round1.Validate.validate_new(type, json) do
       case Db.insert(type, entity.id, entity) do
         :ok ->
           conn

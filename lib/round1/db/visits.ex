@@ -41,25 +41,25 @@ defmodule Round1.Db.Visits do
   end
 
   def update(old, new) do
-    cond do
-      old.user != new.user ->
-        Agent.update(
-          __MODULE__,
-          fn state ->
-            state
-            |> Map.update!(old.user, & %{ &1 | visits: Enum.filter(&1.visits, fn v -> v.id != old.id end)})
-            |> Map.update(
-              new.user, %__MODULE__{sorted: false, visits: [new]},
-            & %{ &1 | sorted: false, visits: [ new | &1.visits ]})
-          end)
+    if old.user != new.user do
+      Agent.update(
+        __MODULE__,
+        fn state ->
+          state
+          |> Map.update!(old.user, & %{ &1 | visits: Enum.filter(&1.visits, fn v -> v.id != old.id end)})
+          |> Map.update(
+            new.user, %__MODULE__{sorted: false, visits: [new]},
+          & %{ &1 | sorted: false, visits: [ new | &1.visits ]})
+        end)
+    end
 
-      old.visited_at != new.visited_at ->
-        Agent.update(
-          __MODULE__,
-          fn state ->
-            state
-            |> Map.update!(new.user, & %{ &1 | sorted: false })
-          end)
+    if old.visited_at != new.visited_at do
+      Agent.update(
+        __MODULE__,
+        fn state ->
+          state
+          |> Map.update!(new.user, & %{ &1 | sorted: false })
+        end)
     end
   end
 
