@@ -3,7 +3,7 @@ defmodule ReqResp do
 end
 
 
-defmodule StatusGetTest do
+defmodule Phase1Test do
   use ExUnit.Case
   require ReqResp
 
@@ -34,7 +34,10 @@ defmodule StatusGetTest do
     %ReqResp{method: m |> String.downcase |> String.to_atom,
              uri: u,
              code: String.to_integer(s),
-             resp: List.first(r)
+             resp: case r do
+                     [] -> nil
+                     [x] -> Poison.decode!(x)
+                   end
             }
     _ -> nil
   end)
