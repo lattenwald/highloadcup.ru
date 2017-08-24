@@ -26,6 +26,7 @@ defmodule Round1.Mixfile do
       {:plug, "~> 1.4"},
       {:poison, "~> 3.1"},
       {:timex, "~> 3.1"},
+      {:distillery, "~> 1.5"},
 
       {:httpoison, "~> 0.13.0", only: :test}
     ]
