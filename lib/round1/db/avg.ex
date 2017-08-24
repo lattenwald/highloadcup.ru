@@ -49,14 +49,14 @@ defmodule Round1.Db.Avg do
     from_date = opts[:from_date]
     to_date   = opts[:to_date]
 
-    {{y, m, d}, t} = :erlang.localtime
+    now = Timex.now
     born_before = case opts[:from_age] do
                     nil -> nil
-                    age -> to_timestamp {{y - age, m, d}, t}
+                    age -> now |> Timex.shift(years: -age) |> Timex.to_unix
                   end
     born_after  = case opts[:to_age] do
                     nil -> nil
-                    age -> to_timestamp {{y - age, m, d}, t}
+                    age -> now |> Timex.shift(years: -age) |> Timex.to_unix
                   end
 
     gender    = opts[:gender]
@@ -87,11 +87,6 @@ defmodule Round1.Db.Avg do
       __MODULE__,
       & &1[location_id]
     ) || []
-  end
-
-  # https://stackoverflow.com/questions/12527908/how-to-convert-datetime-to-timestamp-in-erlang
-  defp to_timestamp(datetime) do
-    (:calendar.datetime_to_gregorian_seconds(datetime) - 62167219200)*1000000
   end
 
 end
