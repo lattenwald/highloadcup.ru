@@ -10,6 +10,9 @@ defmodule Round1Test do
   @ansfile2 Application.fetch_env!(:round1, :datafile) |> Path.dirname |> Path.join("answers/phase_2_post.answ")
   @ammofile2 Application.fetch_env!(:round1, :datafile) |> Path.dirname |> Path.join("ammo/phase_2_post.ammo")
 
+  @ansfile3 Application.fetch_env!(:round1, :datafile) |> Path.dirname |> Path.join("answers/phase_3_get.answ")
+  @ammofile3 Application.fetch_env!(:round1, :datafile) |> Path.dirname |> Path.join("ammo/phase_3_get.ammo")
+
   def req_status_equals(method, uri, code, body \\ "") do
     {:ok, resp} = HTTPoison.request(method, "http://localhost:#{@port}#{uri}", body)
     assert resp.status_code == code
@@ -58,7 +61,7 @@ defmodule Round1Test do
   end)
   |> Enum.zip(1 .. 50000)
   |> Enum.each(fn {%{method: method, uri: uri, code: code, body: body}, n} ->
-    test "#{n}: #{method} #{uri} #{code}" do
+    test "phase1 #{n}: #{method} #{uri} #{code}" do
       method = unquote method
       uri = unquote uri
       code = unquote code
@@ -96,7 +99,44 @@ defmodule Round1Test do
   end)
   |> Enum.zip(1 .. 50000)
   |> Enum.each(fn {%{method: method, uri: uri, code: code, body: body}, n} ->
-    test "#{n}: #{method} #{uri} #{code}" do
+    test "phase2 #{n}: #{method} #{uri} #{code}" do
+      method = unquote method
+      uri = unquote uri
+      code = unquote code
+      body = unquote body
+
+      req_status_equals(method, uri, code, body)
+    end
+  end)
+
+  @ammofile3
+  |> File.read!
+  |> String.split(~r/^\d+\s+[A-Z]+:[^"',\s]+$/m)
+  |> Stream.map(&String.trim_leading/1)
+  |> Stream.drop(1)
+  |> Enum.zip(
+    @ansfile3
+    |> File.read!
+    |> String.split("\n")
+    |> Stream.map(&String.split(&1, "\t"))
+    |> Stream.map(fn [m, u, s | r] ->
+      %ReqResp{method: m |> String.downcase |> String.to_atom,
+               uri: u,
+               code: String.to_integer(s),
+               resp: case r do
+                       [] -> nil
+                       [x] -> x
+                     end
+              }
+      _ -> nil
+    end)
+  ) |> Stream.map(fn {ammo, reqresp} ->
+    body = Regex.run(~r/\r\n\r\n(.*)$/, ammo, capture: :all_but_first)
+    %{reqresp | body: body}
+  end)
+  |> Enum.zip(1 .. 50000)
+  |> Enum.each(fn {%{method: method, uri: uri, code: code, body: body}, n} ->
+    test "phase3 #{n}: #{method} #{uri} #{code}" do
       method = unquote method
       uri = unquote uri
       code = unquote code

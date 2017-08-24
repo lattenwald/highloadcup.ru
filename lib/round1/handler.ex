@@ -70,7 +70,7 @@ defmodule Round1.Handler do
          {:ok, body} <- fetch_body(conn),
          {:ok, json} <- Poison.decode(body),
          {:ok, entity} <- Round1.Validate.validate_update(type, json) do
-      case Db.update(type, id, json) do
+      case Db.update(type, id, entity) do
         nil -> not_found(conn)
         :error -> bad_request(conn)
         :ok ->

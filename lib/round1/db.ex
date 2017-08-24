@@ -64,7 +64,7 @@ defmodule Round1.Db do
     try do
       Enum.reduce(
         new, old,
-        fn {k, v}, acc -> Map.replace!(acc, String.to_existing_atom(k), v) end
+        fn {k, v}, acc -> Map.replace!(acc, k, v) end
       )
     rescue
       other ->
