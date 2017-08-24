@@ -77,7 +77,8 @@ defmodule Round1.Db.Avg do
         |> Stream.filter(& is_nil(born_after)  || &1.user.birth_date > born_after)
         |> Enum.reduce({0, 0}, fn visit, {total, cnt} -> {total+visit.mark, cnt+1} end)
 
-        if cnt == 0, do: 0, else: total / cnt
+        # if cnt == 0, do: 0, else: total / cnt
+        if cnt == 0, do: 0, else: round((total / cnt) * 100000) / 100000
     end
   end
 
