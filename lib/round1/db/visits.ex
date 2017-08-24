@@ -82,7 +82,7 @@ defmodule Round1.Db.Visits do
         |> Stream.filter(& is_nil(to_distance) || &1.location.distance < to_distance)
         |> Stream.map(& %{mark: &1.mark, visited_at: &1.visited_at, place: &1.location.place})
         |> Stream.filter(& is_nil(from_date) || &1.visited_at > from_date)
-        |> Stream.filter(& is_nil(to_date) || &1.visited_at < from_date)
+        |> Stream.filter(& is_nil(to_date) || &1.visited_at < to_date)
         |> Enum.into([])
     end
   end
