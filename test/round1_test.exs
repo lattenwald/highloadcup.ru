@@ -7,24 +7,11 @@ defmodule Round1Test do
   @port Application.get_env(:round1, :port, 80)
   @basedir Application.fetch_env!(:round1, :datafile) |> Path.dirname
 
-  def req_status_equals(method, uri, code, body \\ "") do
+  def req_status_equals(method, uri, code, body \\ "", resp_body \\ "") do
     {:ok, resp} = HTTPoison.request(method, "http://localhost:#{@port}#{uri}", body)
     assert resp.status_code == code
-  end
-
-  def req_resp_ok(rr) do
-    {:ok, resp} = HTTPoison.request(rr.method, "http://localhost:#{@port}#{rr.uri}", rr.body)
-    resp.status_code == rr.code
-  end
-
-  defmacro test_status(method, uri, code) do
-    quote do
-      test "#{unquote method} #{unquote uri} #{unquote code}" do
-        method = unquote method
-        uri = unquote uri
-        code = unquote code
-        assert req_status_equals(method, uri, code)
-      end
+    with {:ok, json} <- Poison.decode(resp_body || "") do
+      assert Poison.decode!(resp.body) == json
     end
   end
 
@@ -57,14 +44,15 @@ defmodule Round1Test do
       %{reqresp | body: body}
     end)
     |> Enum.zip(1 .. 50000)
-    |> Enum.each(fn {%{method: method, uri: uri, code: code, body: body}, n} ->
+    |> Enum.each(fn {%{method: method, uri: uri, code: code, body: body, resp: resp}, n} ->
       test "phase_#{phase} [#{n}] #{method} #{uri} #{code}" do
         method = unquote method
         uri = unquote uri
         code = unquote code
         body = unquote body
+        resp = unquote resp
 
-        assert req_status_equals(method, uri, code, body)
+        assert req_status_equals(method, uri, code, body, resp)
       end
     end)
   end)
