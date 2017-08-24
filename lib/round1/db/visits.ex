@@ -53,14 +53,17 @@ defmodule Round1.Db.Visits do
         end)
     end
 
-    if old.visited_at != new.visited_at do
-      Agent.update(
-        __MODULE__,
-        fn state ->
-          state
-          |> Map.update!(new.user, & %{ &1 | sorted: false })
-        end)
-    end
+    Agent.update(
+      __MODULE__,
+      fn state ->
+        state
+        |> Map.update!(new.user, & %{ &1 |
+                                    sorted: &1.sorted && old.visited_at == new.visited_at,
+                                    visits: Enum.map(&1.visits, fn v ->
+                                      if v.id == new.id, do: new, else: v
+                                    end)})
+      end)
+
   end
 
   def get(user_id, opts \\ []) do
