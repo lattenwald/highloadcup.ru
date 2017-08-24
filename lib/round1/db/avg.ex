@@ -43,6 +43,15 @@ defmodule Round1.Db.Avg do
           |> Map.update(new.location, [new], & [new | &1 ])
         end)
     end
+
+    Agent.update(
+      __MODULE__,
+      fn state ->
+        state
+        |> Map.update!(new.location, &Enum.map(&1, fn v ->
+              if v.id == new.id, do: new, else: v end))
+      end
+    )
   end
 
   def get(location_id, opts \\ []) do
