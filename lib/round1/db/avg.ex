@@ -67,7 +67,7 @@ defmodule Round1.Db.Avg do
       true ->
         {total, cnt} = get_visits(location_id)
         |> Stream.filter(& is_nil(from_date) || &1.visited_at > from_date)
-        |> Stream.filter(& is_nil(to_date) || &1.visited_at < from_date)
+        |> Stream.filter(& is_nil(to_date) || &1.visited_at < to_date)
         |> Stream.map(fn visit ->
           user = Db.get(:users, visit.user)
           %{visit | user: user}
