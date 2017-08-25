@@ -15,7 +15,7 @@ defmodule Round1.Db.Visits do
 
   ### interface
   def start_link() do
-    Logger.debug "#{__MODULE__} starting"
+    Logger.info "#{__MODULE__} starting"
     Agent.start_link(
       fn -> %{} end,
       name: __MODULE__

@@ -6,7 +6,7 @@ defmodule Round1.Db do
 
   ### interface
   def start_link() do
-    Logger.debug "#{__MODULE__} starting"
+    Logger.info "#{__MODULE__} starting"
     res = {:ok, _} = Agent.start_link(
       fn -> %{users: %{}, locations: %{}, visits: %{}} end,
       name: __MODULE__
