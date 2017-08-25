@@ -1,78 +1,59 @@
 defmodule Round1.Db do
   require Logger
-  use Agent, restart: :transient
+  import Supervisor.Spec
 
   @datafile Application.fetch_env!(:round1, :datafile)
 
   ### interface
   def start_link() do
     Logger.info "#{__MODULE__} starting"
-    res = {:ok, _} = Agent.start_link(
-      fn -> %{users: %{}, locations: %{}, visits: %{}} end,
-      name: __MODULE__
-    )
-    load_zip(@datafile)
-    res
+    Supervisor.start_link(__MODULE__, nil)
   end
 
-  def get_state, do: Agent.get(__MODULE__, & &1)
+  def get(:users, id), do: Round1.Db.U.get(id)
+  def get(:visits, id), do: Round1.Db.V.get(id)
+  def get(:locations, id), do: Round1.Db.L.get(id)
 
-  def get(type, id) do
-    Agent.get(
-      __MODULE__,
-      fn state -> state[type][id] end
-    )
-  end
+  def update(:users, id, json), do: Round1.Db.U.update(id, json)
+  def update(:visits, id, json), do: Round1.Db.V.update(id, json)
+  def update(:locations, id, json), do: Round1.Db.L.update(id, json)
 
-  def update(type, id, json) do
-    Agent.get_and_update(
-      __MODULE__,
-      fn state ->
-        old = state[type][id]
-        case merge(state[type][id], json) do
-          nil -> {nil, state}
-          :error -> {:error, state}
-          new -> {{:ok, type, old, new}, %{state | type => Map.replace(state[type], id, new)}}
-        end
-      end
-    ) |> case do
-           {:ok, :visits, old, new} ->
-             Round1.Db.Visits.update(old, new)
-             Round1.Db.Avg.update(old, new)
-             :ok
-           {:ok, _, _, _} -> :ok
-           other -> other
-         end
-  end
+  def insert(:users, id, json), do: Round1.Db.U.insert(id, json)
+  def insert(:visits, id, json), do: Round1.Db.V.insert(id, json)
+  def insert(:locations, id, json), do: Round1.Db.L.insert(id, json)
 
-  def insert(type, id, data) do
-    if get(type, id) do
-      :error
-    else
-      load_data(type, [data])
-      if type == :visits do
-        Round1.Db.Visits.add_visit(data)
-        Round1.Db.Avg.add_visit(data)
-      end
-      :ok
-    end
-  end
-
-  defp merge(nil, _), do: nil
-  defp merge(_, %{"id" => _}), do: :error
-  defp merge(old, new) do
+  def merge(nil, _), do: nil
+  def merge(_, %{"id" => _}), do: :error
+  def merge(old, new) do
     try do
       Enum.reduce(
         new, old,
         fn {k, v}, acc -> Map.replace!(acc, k, v) end
       )
     rescue
-      other ->
-        Logger.warn "#{__MODULE__} merge #{inspect other}, old: #{inspect old}, new: #{inspect new}"
+      _other ->
+        # Logger.warn "#{__MODULE__} merge #{inspect other}, old: #{inspect old}, new: #{inspect new}"
         :error
     else
       new_item -> new_item
     end
+  end
+
+  ### callbacks
+  def init(_) do
+    children = [
+      worker(Round1.Db.U, []),
+      worker(Round1.Db.V, []),
+      worker(Round1.Db.L, []),
+    ]
+
+    res = supervise(children, strategy: :one_for_one, name: __MODULE__)
+    spawn fn ->
+      # fugly hack
+      :timer.sleep 1000
+      load_zip(@datafile)
+    end
+    res
   end
 
   ### loading data
@@ -109,24 +90,9 @@ defmodule Round1.Db do
   end
 
   defp load_data(data) do
-    load_data(:users, data[:users])
-    load_data(:locations, data[:locations])
-    load_data(:visits, data[:visits])
-
-    Round1.Db.Visits.add_visits(data[:visits])
-    Round1.Db.Avg.add_visits(data[:visits])
-  end
-
-  defp load_data(_key, nil), do: :ok
-  defp load_data(key, data) do
-    for item <- data do
-      Agent.update(
-        __MODULE__,
-        fn state ->
-          %{ state | key => Map.put(state[key], item.id, item)}
-        end
-      )
-    end
+    Round1.Db.U.load_data(data[:users])
+    Round1.Db.L.load_data(data[:locations])
+    Round1.Db.V.load_data(data[:visits])
   end
 
 end

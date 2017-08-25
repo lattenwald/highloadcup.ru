@@ -6,7 +6,7 @@ defmodule Round1.Handler do
 
   @port Application.get_env(:round1, :port, 80)
 
-  plug Plug.Logger, level: :debug
+  # plug Plug.Logger, level: :debug
   plug :match
   plug :dispatch
 
@@ -113,14 +113,14 @@ defmodule Round1.Handler do
       |> Keyword.put(:to_distance, to_distance)
       |> Keyword.put(:country, country)
 
-      case Db.Visits.get(id, opts) do
+      case Round1.Db.V.get_for_user(id, opts) do
         nil -> not_found(conn)
-        visits ->
+
+        v ->
           conn
           |> Plug.Conn.put_resp_content_type("application/json")
-          |> Plug.Conn.send_resp(200, Poison.encode!(%{visits: visits}))
+          |> Plug.Conn.send_resp(200, Poison.encode!(%{visits: v}))
       end
-
     else
       _ -> bad_request(conn)
     end
@@ -132,7 +132,7 @@ defmodule Round1.Handler do
          {:ok, to_date} <- parse_int(conn.params["toDate"]),
          {:ok, from_age} <- parse_int(conn.params["fromAge"]),
          {:ok, to_age} <- parse_int(conn.params["toAge"]),
-         {:ok, gender} <- parse_str(conn.params["gender"])
+         {:ok, gender} <- parse_gender(conn.params["gender"])
       do
       opts = []
       |> Keyword.put(:from_date, from_date)
@@ -141,7 +141,7 @@ defmodule Round1.Handler do
       |> Keyword.put(:to_age, to_age)
       |> Keyword.put(:gender, gender)
 
-      case Db.Avg.get(id, opts) do
+      case Round1.Db.V.avg(id, opts) do
         nil -> not_found(conn)
         avg ->
           conn
@@ -164,5 +164,9 @@ defmodule Round1.Handler do
   defp parse_str(nil), do: {:ok, nil}
   defp parse_str(""), do: :error
   defp parse_str(str), do: {:ok, str}
+
+  defp parse_gender(nil), do: {:ok, nil}
+  defp parse_gender(str) when str in ["m", "f"], do: {:ok, str}
+  defp parse_gender(_), do: :error
 
 end

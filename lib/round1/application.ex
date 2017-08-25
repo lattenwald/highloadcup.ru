@@ -10,9 +10,7 @@ defmodule Round1.Application do
   def start(_type, _args) do
     # List all child processes to be supervised
     children = [
-      worker(Round1.Db.Visits, []),
-      worker(Round1.Db.Avg, []),
-      worker(Round1.Db, []),
+      supervisor(Round1.Db, []),
       worker(Round1.Handler, []),
     ]
 
