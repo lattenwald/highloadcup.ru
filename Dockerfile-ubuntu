@@ -1,0 +1,39 @@
+FROM ubuntu:latest as builder
+
+RUN apt-get update && apt-get -y upgrade && apt-get -y install wget locales
+RUN wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb && dpkg -i erlang-solutions_1.0_all.deb
+RUN apt-get update && apt-get -y install esl-erlang elixir
+
+ADD . /app
+
+WORKDIR /app
+
+ENV MIX_ENV=prod
+
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+RUN mix do local.hex --force, local.rebar --force
+RUN mix deps.clean --all
+RUN mix do deps.get, deps.compile, release.clean, release
+
+FROM ubuntu:latest
+WORKDIR /app
+
+RUN apt-get update && apt-get -y upgrade && apt-get -y install bash libssl-dev locales
+
+EXPOSE 80
+
+COPY --from=builder /app/_build/prod/rel/round1/releases/0.1.0/round1.tar.gz /app
+
+ARG bust
+RUN echo $bust && tar -xzf round1.tar.gz
+
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+CMD /app/bin/round1 foreground
