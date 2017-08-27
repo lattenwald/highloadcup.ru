@@ -5,7 +5,7 @@ defmodule Round1Test do
   @moduletag timeout: 180
 
   @port Application.get_env(:round1, :port, 80)
-  @basedir Application.fetch_env!(:round1, :datafile) |> Path.dirname
+  @basedir Application.fetch_env!(:round1, :datadir) |> Path.dirname
 
   def req_status_equals(method, uri, code, body \\ "", resp_body \\ "") do
     {:ok, resp} = HTTPoison.request(method, "http://localhost:#{@port}#{uri}", body)

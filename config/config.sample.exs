@@ -6,10 +6,10 @@ config :logger,
   level: :warn
 
 config :round1,
-  port: 8080,
+  port: 80,
 
   # for test purposes phase_*.answ should reside nearby, in /path/to/answers/*.answ
   # ammo in /path/to/ammo/*.ammo
-  datafile: "/path/to/data.zip"
+  datadir: "/path/to/data" # unzipped data
 
 config :tzdata, :autoupdate, :disabled

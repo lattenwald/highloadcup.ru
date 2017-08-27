@@ -22,7 +22,7 @@ RUN mix do deps.get, deps.compile, release.clean, release
 FROM ubuntu:latest
 WORKDIR /app
 
-RUN apt-get update && apt-get -y upgrade && apt-get -y install bash libssl-dev locales
+RUN apt-get update && apt-get -y upgrade && apt-get -y install bash libssl-dev locales unzip
 
 EXPOSE 80
 
@@ -36,4 +36,4 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 
-CMD /app/bin/round1 foreground
+CMD mkdir /tmp/123 && cd /tmp/123 && unzip /tmp/data/data.zip && /app/bin/round1 foreground

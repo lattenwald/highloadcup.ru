@@ -28,4 +28,4 @@ COPY --from=builder /root/round1/_build/prod/rel/round1/releases/0.1.0/round1.ta
 
 RUN tar -xzf round1.tar.gz;rm round1.tar.gz
 
-CMD /root/round1/bin/round1 foreground
+CMD mkdir /tmp/123 && cd /tmp/123 && unzip /tmp/data/data.zip && /root/round1/bin/round1 foreground

@@ -2,7 +2,7 @@ defmodule Round1.Db do
   require Logger
   import Supervisor.Spec
 
-  @datafile Application.fetch_env!(:round1, :datafile)
+  @datadir Application.fetch_env!(:round1, :datadir)
 
   ### interface
   def start_link() do
@@ -50,37 +50,30 @@ defmodule Round1.Db do
     res = supervise(children, strategy: :one_for_one, name: __MODULE__)
     spawn fn ->
       # fugly hack
+      start = Timex.now
       :timer.sleep 1000
-      load_zip(@datafile)
+      load_dir(@datadir)
+      finish = Timex.now
+      Logger.info "done loading in #{Timex.diff finish, start, :seconds} seconds"
     end
     res
   end
 
   ### loading data
   def load_dir(dirname) do
-    for file <- File.ls!(dirname),
-      Path.extname(file) == ".json",
-      file = Path.join(dirname, file) do
-        if File.dir?(file) do
-          load_dir(file)
-        else
-          load_file(file)
-        end
-    end
+    Path.wildcard("#{dirname}/**/*.json")
+    |> Flow.from_enumerable
+    |> Flow.partition
+    |> Flow.each(&load_file/1)
+    |> Flow.run
   end
 
   def load_file(filename) do
+    Logger.info "loading #{filename}..."
     filename
     |> File.read!
     |> load_binary
-  end
-
-  def load_zip(filename) do
-    {:ok, files} = :zip.extract(String.to_charlist(filename), [:memory])
-    for {file, data} <- files,
-      Path.extname(file) == ".json" do
-        load_binary(data)
-    end
+    Logger.info "...loaded #{filename}"
   end
 
   def load_binary(data) do
