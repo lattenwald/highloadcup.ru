@@ -3,8 +3,8 @@ defmodule Round1.Db do
   import Supervisor.Spec
 
   @datadir Application.fetch_env!(:round1, :datadir)
-  @timestamp Path.join(@datadir, "options.txt") |> File.read! |> String.split("\n") |> List.first |> String.to_integer
-  @now Timex.from_unix(@timestamp)
+  @options_file Path.join(@datadir, "options.txt")
+  @table :timestamp_ets
 
   ### interface
   def start_link() do
@@ -41,12 +41,24 @@ defmodule Round1.Db do
     end
   end
 
-  def timestamp, do: @timestamp
-  def now, do: @now
+  def timestamp do
+    case :ets.lookup(@table, :timestamp) do
+      [] -> raise "no :timestamp"
+      [{:timestamp, timestamp}] -> timestamp
+    end
+  end
+
+  def now do
+    case :ets.lookup(@table, :now) do
+      [] -> raise "no :now"
+      [{:now, now}] -> now
+    end
+  end
 
   ### callbacks
   def init(_) do
     children = [
+      worker(Round1.Db.Time, []),
       worker(Round1.Db.U, []),
       worker(Round1.Db.V, []),
       worker(Round1.Db.L, []),
@@ -74,7 +86,20 @@ defmodule Round1.Db do
     |> Flow.each(&load_file/1)
     |> Flow.run
 
+    load_options(@options_file)
+
     Logger.info "Data timestamp is #{timestamp()}"
+  end
+
+  def load_options(file) do
+    timestamp = file |> File.read! |> String.split("\n") |> List.first |> String.to_integer
+    now = Timex.from_unix timestamp
+
+    pid = Round1.Db.Time.pid()
+
+    :ets.new(@table, [:set, :named_table, {:heir, pid, nil}, read_concurrency: true])
+    :ets.insert(@table, {:timestamp, timestamp})
+    :ets.insert(@table, {:now, now})
   end
 
   def load_file(filename) do
