@@ -25,7 +25,8 @@ defmodule Round1.Db.Visits do
         to_distance = opts[:to_distance]
 
         :ets.lookup(@table, user_id)
-        |> Stream.map(fn {_user_id, visit} ->
+        |> Stream.map(fn {_user_id, visit_id} ->
+          visit = Round1.Db.V.get(visit_id)
           loc = Round1.Db.L.get(visit.location)
           %{visit | location: loc}
         end)
@@ -51,12 +52,17 @@ defmodule Round1.Db.Visits do
   end
 
   def update(old, new) do
-    GenServer.call(__MODULE__, {:update, old, new})
+    if old.user != new.user do
+      GenServer.call(__MODULE__, {:update, old, new})
+    end
   end
 
   def load_data(nil), do: nil
   def load_data(data) do
-    :ets.insert(@table, Enum.map(data, & {&1.user, &1}))
+    data = data
+    |> Enum.map(& {&1.user, &1.id})
+
+    :ets.insert(@table, data)
   end
 
   ### callbacks
@@ -66,13 +72,13 @@ defmodule Round1.Db.Visits do
   end
 
   def handle_call({:add, visit}, _from, state) do
-    :ets.insert(@table, {visit.user, visit})
+    :ets.insert(@table, {visit.user, visit.id})
     {:reply, :ok, state}
   end
 
   def handle_call({:update, old, new}, _from, state) do
     :ets.delete_object(@table, {old.user, old})
-    :ets.insert(@table, {new.user, new})
+    :ets.insert(@table, {new.user, new.id})
     {:reply, :ok, state}
   end
 

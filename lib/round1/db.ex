@@ -82,8 +82,8 @@ defmodule Round1.Db do
   def load_dir(dirname) do
     Path.wildcard("#{dirname}/**/*.json")
     |> Flow.from_enumerable
-    |> Flow.partition
-    |> Flow.each(&load_file/1)
+    |> Flow.partition(stages: 10)
+    |> Flow.map(&load_file/1)
     |> Flow.run
 
     load_options(@options_file)

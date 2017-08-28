@@ -46,7 +46,7 @@ defmodule Round1.Db.Avg do
         gender    = opts[:gender]
 
         {total, cnt} = :ets.lookup(@table, location_id)
-        |> Stream.map(fn {_location_id, visit} -> visit end)
+        |> Stream.map(fn {_location_id, visit_id} -> Round1.Db.V.get(visit_id) end)
         |> Stream.filter(& is_nil(from_date) || &1.visited_at > from_date)
         |> Stream.filter(& is_nil(to_date) || &1.visited_at < to_date)
         |> Stream.map(fn visit ->
@@ -82,7 +82,7 @@ defmodule Round1.Db.Avg do
         gender    = opts[:gender]
 
         :ets.lookup(@table, location_id)
-        |> Stream.map(fn {_location_id, visit} -> visit end)
+        |> Stream.map(fn {_location_id, visit_id} -> Round1.Db.V.get(visit_id) end)
         |> Stream.filter(& is_nil(from_date) || &1.visited_at > from_date)
         |> Stream.filter(& is_nil(to_date) || &1.visited_at < to_date)
         |> Stream.map(fn visit ->
@@ -97,12 +97,17 @@ defmodule Round1.Db.Avg do
   end
 
   def update(old, new) do
-    GenServer.call(__MODULE__, {:update, old, new})
+    if old.location != new.location do
+      GenServer.call(__MODULE__, {:update, old, new})
+    end
   end
 
   def load_data(nil), do: nil
   def load_data(data) do
-    :ets.insert(@table, Enum.map(data, & {&1.location, &1}))
+    data = data
+    |> Enum.map(& {&1.location, &1.id})
+
+    :ets.insert(@table, data)
   end
 
   ### callbacks
@@ -112,13 +117,13 @@ defmodule Round1.Db.Avg do
   end
 
   def handle_call({:add, visit}, _from, state) do
-    :ets.insert(@table, {visit.location, visit})
+    :ets.insert(@table, {visit.location, visit.id})
     {:reply, :ok, state}
   end
 
   def handle_call({:update, old, new}, _from, state) do
-    :ets.delete_object(@table, {old.location, old})
-    :ets.insert(@table, {new.location, new})
+    :ets.delete_object(@table, {old.location, old.id})
+    :ets.insert(@table, {new.location, new.id})
     {:reply, :ok, state}
   end
 
