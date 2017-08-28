@@ -30,7 +30,7 @@ defmodule Round1.Db.L do
 
   ### callbacks
   def init(_) do
-    t = :ets.new(@table, [:set, :named_table, read_concurrency: true])
+    t = :ets.new(@table, [:set, :named_table, :public, read_concurrency: true])
     {:ok, t}
   end
 
@@ -55,16 +55,11 @@ defmodule Round1.Db.L do
     {:reply, resp, state}
   end
 
-  def handle_call({:load, data}, _from, state) do
-    for item <- data, do: :ets.insert(@table, {item.id, item})
-    {:reply, :ok, state}
-  end
-
   ### loading
   @doc false
   def load_data(nil), do: nil
   def load_data(data) do
-    GenServer.call(__MODULE__, {:load, data})
+    :ets.insert(@table, Enum.map(data, & {&1.id, &1}))
   end
 
 end

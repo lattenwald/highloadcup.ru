@@ -101,11 +101,13 @@ defmodule Round1.Db.Avg do
   end
 
   def load_data(nil), do: nil
-  def load_data(data), do: GenServer.call(__MODULE__, {:load, data})
+  def load_data(data) do
+    :ets.insert(@table, Enum.map(data, & {&1.location, &1}))
+  end
 
   ### callbacks
   def init(_) do
-    t = :ets.new(@table, [:bag, :named_table, read_concurrency: true])
+    t = :ets.new(@table, [:bag, :named_table, :public, read_concurrency: true])
     {:ok, t}
   end
 
@@ -117,11 +119,6 @@ defmodule Round1.Db.Avg do
   def handle_call({:update, old, new}, _from, state) do
     :ets.delete_object(@table, {old.location, old})
     :ets.insert(@table, {new.location, new})
-    {:reply, :ok, state}
-  end
-
-  def handle_call({:load, data}, _from, state) do
-    for item <- data, do: :ets.insert(@table, {item.location, item})
     {:reply, :ok, state}
   end
 
