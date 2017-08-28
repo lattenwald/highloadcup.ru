@@ -16,13 +16,13 @@ ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 
 RUN mix do local.hex --force, local.rebar --force
-RUN mix deps.clean --all
+# RUN mix deps.clean --all
 RUN mix do deps.get, deps.compile, release.clean, release
 
 FROM ubuntu:zesty
 WORKDIR /app
 
-RUN apt-get update && apt-get -y upgrade && apt-get -y install bash libssl-dev locales unzip
+RUN apt-get update && apt-get -y upgrade && apt-get -y install bash libssl-dev locales p7zip
 
 EXPOSE 80
 
@@ -36,8 +36,10 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 
-CMD mkdir /tmp/123 && \
+CMD echo -n "getting ready " && date && \
+    mkdir /tmp/123 && \
     cd /tmp/123 && \
     cp /tmp/data/options.txt /tmp/123 && \
-    unzip /tmp/data/data.zip && \
+    7z e /tmp/data/data.zip && \
+    echo -n "running app " && date && \
     /app/bin/round1 foreground
