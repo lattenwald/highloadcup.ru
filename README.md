@@ -1,21 +1,39 @@
 # Round1
 
-**TODO: Add description**
+This is a solution for [highloadcup.ru](http://highloadcup.ru).
 
-## Installation
+## Technology
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `round1` to your list of dependencies in `mix.exs`:
+I am using [Elixir](https://elixir-lang.ru). Not actually using there Elixir-specific stuff, so you could say it's just [Erlang](https://www.erlang.org/).
 
-```elixir
-def deps do
-  [
-    {:round1, "~> 0.1.0"}
-  ]
-end
-```
+Data is stored in `ets`, there's some data redundancy to avoid `:ets.select`s, which are too slow. No extra caching or any hardcore optimizations.
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/round1](https://hexdocs.pm/round1).
+[cowboy](https://github.com/ninenines/cowboy) is doing all the serving, being helped by [Plug](https://hexdocs.pm/plug/readme.html); JSON is done with [Poison](https://github.com/devinus/poison).
 
+## Building image
+
+Alpine
+
+    % docker build -f Dockerfile-alpine -t round1_alpine --build-arg bust="`date`" .
+
+Ubuntu, you guessed right
+
+    % docker build -f Dockerfile-ubuntu -t round1_ubuntu --build-arg bust="`date`" .
+
+`bust` argument is for bumping image, you can safely omit it if code actually changed.
+
+## Running image
+
+First checkout the [repo](https://github.com/sat2707/hlcupdocs), go to `TRAIN` or `FULL` data (i.e., `hlcupdocs/data/TRAIN/data`) and create an archive
+
+    % zip data *json
+
+Then you are set to go
+
+    % docker run -p 8080:80 -v /path/to/hlcupdocs/data/TRAIN/data/:/tmp/data/ -t round1_alpine
+
+Replace path and tag with appropriate values.
+
+## Caveats
+
+Alpine image doesn't work at [highloadcup.ru](http://highloadcup.ru).
