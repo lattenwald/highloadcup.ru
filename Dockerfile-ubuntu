@@ -1,4 +1,4 @@
-FROM ubuntu:latest as builder
+FROM ubuntu:zesty as builder
 
 RUN apt-get update && apt-get -y upgrade && apt-get -y install wget locales
 RUN wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb && dpkg -i erlang-solutions_1.0_all.deb
@@ -19,7 +19,7 @@ RUN mix do local.hex --force, local.rebar --force
 RUN mix deps.clean --all
 RUN mix do deps.get, deps.compile, release.clean, release
 
-FROM ubuntu:latest
+FROM ubuntu:zesty
 WORKDIR /app
 
 RUN apt-get update && apt-get -y upgrade && apt-get -y install bash libssl-dev locales unzip
@@ -36,4 +36,8 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 
-CMD mkdir /tmp/123 && cd /tmp/123 && unzip /tmp/data/data.zip && /app/bin/round1 foreground
+CMD mkdir /tmp/123 && \
+    cd /tmp/123 && \
+    cp /tmp/data/options.txt /tmp/123 && \
+    unzip /tmp/data/data.zip && \
+    /app/bin/round1 foreground
