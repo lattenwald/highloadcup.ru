@@ -6,7 +6,7 @@ defmodule Round1.Handler do
 
   @port Application.get_env(:round1, :port, 80)
 
-  # plug Plug.Logger, level: :debug
+  if Application.get_env(:round1, :plug_logger, false), do: plug Plug.Logger, level: :debug
   plug :match
   plug :dispatch
 

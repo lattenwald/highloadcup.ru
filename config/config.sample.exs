@@ -6,10 +6,13 @@ config :logger,
   level: :warn
 
 config :round1,
+  # disable this, gets spammy on stdout
+  plug_logger: true,
+
   port: 80,
 
-  # for test purposes phase_*.answ should reside nearby, in /path/to/answers/*.answ
-  # ammo in /path/to/ammo/*.ammo
-  datadir: "/path/to/data" # unzipped data
+  # path to unzipped data
+  # `options.txt` is expected to be in that directory as well
+  datadir: "/path/to/data"
 
 config :tzdata, :autoupdate, :disabled
