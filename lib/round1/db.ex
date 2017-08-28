@@ -3,6 +3,8 @@ defmodule Round1.Db do
   import Supervisor.Spec
 
   @datadir Application.fetch_env!(:round1, :datadir)
+  @timestamp Path.join(@datadir, "options.txt") |> File.read! |> String.split("\n") |> List.first |> String.to_integer
+  @now Timex.from_unix(@timestamp)
 
   ### interface
   def start_link() do
@@ -15,8 +17,8 @@ defmodule Round1.Db do
   def get(:locations, id), do: Round1.Db.L.get(id)
 
   def update(:users, id, json), do: Round1.Db.U.update(id, json)
-  def update(:visits, id, json), do: Round1.Db.V.update(id, json)
   def update(:locations, id, json), do: Round1.Db.L.update(id, json)
+  def update(:visits, id, json), do: Round1.Db.V.update(id, json)
 
   def insert(:users, id, json), do: Round1.Db.U.insert(id, json)
   def insert(:visits, id, json), do: Round1.Db.V.insert(id, json)
@@ -39,12 +41,17 @@ defmodule Round1.Db do
     end
   end
 
+  def timestamp, do: @timestamp
+  def now, do: @now
+
   ### callbacks
   def init(_) do
     children = [
       worker(Round1.Db.U, []),
       worker(Round1.Db.V, []),
       worker(Round1.Db.L, []),
+      worker(Round1.Db.Visits, []),
+      worker(Round1.Db.Avg, []),
     ]
 
     res = supervise(children, strategy: :one_for_one, name: __MODULE__)
@@ -66,6 +73,8 @@ defmodule Round1.Db do
     |> Flow.partition
     |> Flow.each(&load_file/1)
     |> Flow.run
+
+    Logger.info "Data timestamp is #{timestamp()}"
   end
 
   def load_file(filename) do
@@ -86,6 +95,9 @@ defmodule Round1.Db do
     Round1.Db.U.load_data(data[:users])
     Round1.Db.L.load_data(data[:locations])
     Round1.Db.V.load_data(data[:visits])
+
+    Round1.Db.Visits.load_data(data[:visits])
+    Round1.Db.Avg.load_data(data[:visits])
   end
 
 end

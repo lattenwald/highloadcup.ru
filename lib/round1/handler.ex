@@ -6,7 +6,7 @@ defmodule Round1.Handler do
 
   @port Application.get_env(:round1, :port, 80)
 
-  plug Plug.Logger, level: :debug
+  # plug Plug.Logger, level: :debug
   plug :match
   plug :dispatch
 
@@ -113,7 +113,7 @@ defmodule Round1.Handler do
       |> Keyword.put(:to_distance, to_distance)
       |> Keyword.put(:country, country)
 
-      case Round1.Db.V.get_for_user(id, opts) do
+      case Round1.Db.Visits.get(id, opts) do
         nil -> not_found(conn)
 
         v ->
@@ -141,7 +141,7 @@ defmodule Round1.Handler do
       |> Keyword.put(:to_age, to_age)
       |> Keyword.put(:gender, gender)
 
-      case Round1.Db.V.avg(id, opts) do
+      case Round1.Db.Avg.get(id, opts) do
         nil -> not_found(conn)
         avg ->
           conn

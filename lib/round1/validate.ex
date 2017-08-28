@@ -23,7 +23,7 @@ defmodule Round1.Validate do
       |> Enum.map(fn {k, v} ->
         k = String.to_existing_atom k
         if not schema[k].(v) do
-          # Logger.debug "failed validation for key #{k}"
+          # Logger.warn "failed validation for key #{k}"
           throw :error
         end
         {k, v}
