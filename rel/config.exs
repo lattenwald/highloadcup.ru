@@ -37,6 +37,7 @@ environment :prod do
   set include_erts: true
   set include_src: false
   set cookie: :"hlcup_round1_prod"
+  set vm_args: "rel/vm.args"
 end
 
 # You may define one or more releases in this file.
