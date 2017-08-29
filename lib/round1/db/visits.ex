@@ -67,7 +67,7 @@ defmodule Round1.Db.Visits do
 
   ### callbacks
   def init(_) do
-    t = :ets.new(@table, [:bag, :named_table, :public, read_concurrency: true])
+    t = :ets.new(@table, [:bag, :named_table, :public, :compressed, read_concurrency: true])
     {:ok, t}
   end
 

@@ -3,7 +3,6 @@ defmodule Round1.Db.U do
   use GenServer, restart: :transient
 
   @table :users
-  @columns ~w(id first_name last_name email birth_date gender) |> Enum.map(&String.to_atom/1)
 
   ### interface
   def start_link() do
@@ -13,7 +12,7 @@ defmodule Round1.Db.U do
 
   def get(id) do
     case :ets.lookup(@table, id) do
-      [item] -> from_tuple(item)
+      [{^id, item}] -> item
       [] -> nil
     end
   end
@@ -31,12 +30,12 @@ defmodule Round1.Db.U do
 
   ### callbacks
   def init(_) do
-    t = :ets.new(@table, [:set, :named_table, :public, read_concurrency: true])
+    t = :ets.new(@table, [:set, :named_table, :public, :compressed, read_concurrency: true])
     {:ok, t}
   end
 
   def handle_call({:insert, id, data}, _from, state) do
-    res = :ets.insert_new(@table, to_tuple(data)) && :ok || :error
+    res = :ets.insert_new(@table, {id, data}) && :ok || :error
     {:reply, res, state}
   end
 
@@ -47,7 +46,7 @@ defmodule Round1.Db.U do
         old ->
           case Round1.Db.merge(old, json) do
             new=%{} ->
-              :ets.insert(@table, to_tuple(new))
+              :ets.insert(@table, {id, new})
               :ok
 
             other   -> other # nil or :error
@@ -59,9 +58,8 @@ defmodule Round1.Db.U do
   ### loading
   @doc false
   def load_data(nil), do: nil
-  def load_data(data), do: :ets.insert(@table, Enum.map(data, &to_tuple/1))
-
-  defp to_tuple(item=%{}), do: @columns |> Enum.map(& item[&1]) |> List.to_tuple
-  defp from_tuple(item), do: @columns |> Enum.zip(Tuple.to_list(item)) |> Enum.into(%{})
+  def load_data(data) do
+    :ets.insert(@table, Enum.map(data, & {&1.id, &1}))
+  end
 
 end
