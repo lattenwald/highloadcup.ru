@@ -77,7 +77,7 @@ defmodule Round1.Db.Visits do
   end
 
   def handle_call({:update, old, new}, _from, state) do
-    :ets.delete_object(@table, {old.user, old})
+    :ets.delete_object(@table, {old.user, old.id})
     :ets.insert(@table, {new.user, new.id})
     {:reply, :ok, state}
   end
