@@ -22,7 +22,7 @@ RUN mix do deps.get, deps.compile, release.clean, release
 FROM ubuntu:zesty
 WORKDIR /app
 
-RUN apt-get update && apt-get -y upgrade && apt-get -y install bash libssl-dev locales p7zip
+RUN apt-get update && apt-get -y upgrade && apt-get -y install bash libssl-dev locales p7zip-full
 
 EXPOSE 80
 
