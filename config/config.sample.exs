@@ -6,9 +6,6 @@ config :logger,
   level: :warn
 
 config :round1,
-  # disable this, gets spammy on stdout
-  plug_logger: true,
-
   port: 80,
 
   # path to unzipped data
