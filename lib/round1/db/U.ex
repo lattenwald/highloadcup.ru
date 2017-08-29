@@ -13,7 +13,7 @@ defmodule Round1.Db.U do
   def get(id) do
     case :ets.lookup(@table, id) do
       [{^id, item}] -> item
-      [] -> nil
+      [] -> Round1.Handler.not_found!()
     end
   end
 
@@ -23,7 +23,7 @@ defmodule Round1.Db.U do
 
   def update(id, json) do
     case get(id) do
-      nil  -> nil
+      nil  -> Round1.Handler.not_found!()
       _old -> GenServer.call(__MODULE__, {:update, id, json})
     end
   end
@@ -42,14 +42,15 @@ defmodule Round1.Db.U do
   def handle_call({:update, id, json}, _from, state) do
     resp =
       case get(id) do
-        nil -> nil
+        nil -> Round1.Handler.not_found!()
         old ->
           case Round1.Db.merge(old, json) do
             new=%{} ->
               :ets.insert(@table, {id, new})
               :ok
 
-            other   -> other # nil or :error
+            nil    -> Round1.Handler.not_found!()
+            :error -> Round1.Handler.bad_request!()
           end
       end
     {:reply, resp, state}

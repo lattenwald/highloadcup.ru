@@ -16,7 +16,7 @@ defmodule Round1.Db.Visits do
 
   def get(user_id, opts \\ []) do
     case Round1.Db.U.get(user_id) do
-      nil -> nil
+      nil -> Round1.Handler.not_found!()
 
       _user ->
         from_date   = opts[:from_date]
@@ -41,7 +41,7 @@ defmodule Round1.Db.Visits do
 
   def add(visit) do
     case Round1.Db.U.get(visit.user) do
-      nil -> nil
+      nil -> Round1.Handler.not_found!()
       _user ->
         GenServer.call(__MODULE__, {:add, visit})
     end
