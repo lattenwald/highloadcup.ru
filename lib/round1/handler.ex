@@ -6,7 +6,7 @@ defmodule Round1.Handler do
 
   # Record.defrecord :req, Record.extract(:req, from_lib: "elli/include/elli.hrl")
 
-  def handle(req, args) do
+  def handle(req, _args) do
     # Logger.debug "#{inspect req} #{inspect args}"
     handle(:elli_request.method(req), :elli_request.path(req), req)
   end
@@ -16,8 +16,8 @@ defmodule Round1.Handler do
   def handle(:GET, ["users", id], _req), do: fetch(:users, id)
   def handle(:GET, ["locations", id], _req), do: fetch(:locations, id)
   def handle(:GET, ["visits", id], _req), do: fetch(:visits, id)
-  def handle(:GET, ["users", id, "visits"], req), do: fetch_visits(id, args(req))
-  def handle(:GET, ["locations", id, "avg"], req), do: fetch_avg(id, args(req))
+  def handle(:GET, ["users", id, "visits"], req), do: fetch_visits(id, req)
+  def handle(:GET, ["locations", id, "avg"], req), do: fetch_avg(id, req)
 
   def handle(:POST, ["users", "new"], req), do: insert(:users, :elli_request.body(req))
   def handle(:POST, ["locations", "new"], req), do: insert(:locations, :elli_request.body(req))
@@ -27,13 +27,7 @@ defmodule Round1.Handler do
   def handle(:POST, ["locations", id], req), do: update(:locations, id, :elli_request.body(req))
   def handle(:POST, ["visits", id], req), do: update(:visits, id, :elli_request.body(req))
 
-  def handle(_, _, _), do: not_found
-
-  defp args(req) do
-    :elli_request.get_args(req)
-    |> Enum.map(fn {k, v} -> {String.to_atom(k), URI.decode(v)} end)
-  end
-
+  def handle(_, _, _), do: not_found()
 
   # post "/users/new",     do: conn |> insert(:users)
   # post "/locations/new", do: conn |> insert(:locations)
@@ -53,12 +47,15 @@ defmodule Round1.Handler do
 
   def handle_event(
     :request_complete,
-    [req, response_code, _response_headers, _response_body, t={timings, _}],
+    [req, response_code, _response_headers, _response_body, {timings, _}],
     _) do
     Logger.debug fn ->
       req_time = (timings[:request_end] - timings[:request_start]) / 1000
       send_time = (timings[:send_end] - timings[:send_start]) / 1000
-      "#{:elli_request.method(req)} #{:elli_request.path(req) |> Enum.join("/")} : #{response_code} req:#{req_time} send:#{send_time} #{inspect t}"
+      hdr_time = (timings[:headers_end] - timings[:headers_start]) / 1000
+      body_time = (timings[:body_end] - timings[:body_start]) / 1000
+      user_time = (timings[:user_end] - timings[:user_start]) / 1000
+      "#{:elli_request.method(req)} #{:elli_request.path(req) |> Enum.join("/")} : #{response_code} req:#{req_time} send:#{send_time} user:#{user_time} hdr:#{hdr_time} body:#{body_time}"
     end
     :ok
   end
@@ -146,12 +143,12 @@ defmodule Round1.Handler do
     end
   end
 
-  defp fetch_visits(id, args) do
+  defp fetch_visits(id, req) do
     with {id, ""} <- Integer.parse(id),
-         {:ok, from_date} <- parse_int(args[:fromDate]),
-         {:ok, to_date} <- parse_int(args[:toDate]),
-         {:ok, to_distance} <- parse_int(args[:toDistance]),
-         {:ok, country} <- parse_str(args[:country])
+         {:ok, from_date} <- parse_int(:elli_request.get_arg_decoded("fromDate", req, nil)),
+         {:ok, to_date} <- parse_int(:elli_request.get_arg_decoded("toDate", req, nil)),
+         {:ok, to_distance} <- parse_int(:elli_request.get_arg_decoded("toDistance", req, nil)),
+         {:ok, country} <- parse_str(:elli_request.get_arg_decoded("country", req, nil))
       do
       opts = []
       |> Keyword.put(:from_date, from_date)
@@ -168,13 +165,13 @@ defmodule Round1.Handler do
     end
   end
 
-  defp fetch_avg(id, args) do
+  defp fetch_avg(id, req) do
     with {id, ""} <- Integer.parse(id),
-         {:ok, from_date} <- parse_int(args[:fromDate]),
-         {:ok, to_date} <- parse_int(args[:toDate]),
-         {:ok, from_age} <- parse_int(args[:fromAge]),
-         {:ok, to_age} <- parse_int(args[:toAge]),
-         {:ok, gender} <- parse_gender(args[:gender])
+         {:ok, from_date} <- parse_int(:elli_request.get_arg_decoded("fromDate", req, nil)),
+         {:ok, to_date} <- parse_int(:elli_request.get_arg_decoded("toDate", req, nil)),
+         {:ok, from_age} <- parse_int(:elli_request.get_arg_decoded("fromAge", req, nil)),
+         {:ok, to_age} <- parse_int(:elli_request.get_arg_decoded("toAge", req, nil)),
+         {:ok, gender} <- parse_gender(:elli_request.get_arg_decoded("gender", req, nil))
       do
       opts = []
       |> Keyword.put(:from_date, from_date)
