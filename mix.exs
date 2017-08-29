@@ -22,8 +22,7 @@ defmodule Round1.Mixfile do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:cowboy, "~> 1.1"},
-      {:plug, "~> 1.4"},
+      {:elli, "~> 2.0"},
       {:timex, "~> 3.1"},
       {:distillery, "~> 1.5"},
       {:flow, "~> 0.12.0"},
@@ -31,7 +30,8 @@ defmodule Round1.Mixfile do
       {:jiffy, "~> 0.14.11"},
       {:atomic_map, "~> 0.9.2"},
 
-      {:httpoison, "~> 0.13.0", only: :test}
+      {:httpoison, "~> 0.13.0", only: :test},
+      {:poison, "~> 3.1", only: :test},
     ]
   end
 end

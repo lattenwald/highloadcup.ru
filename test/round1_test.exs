@@ -15,7 +15,8 @@ defmodule Round1Test do
     end
   end
 
-  ["1_get", "2_post", "3_get"]
+  # ["1_get", "2_post", "3_get"]
+  ["1_get"]
   |> Enum.map(& {&1, "#{@basedir}/answers/phase_#{&1}.answ", "#{@basedir}/ammo/phase_#{&1}.ammo"})
   |> Enum.each(fn {phase, ansfile, ammofile} ->
     ammofile
@@ -45,7 +46,7 @@ defmodule Round1Test do
     end)
     |> Enum.zip(1 .. 50000)
     |> Enum.each(fn {%{method: method, uri: uri, code: code, body: body, resp: resp}, n} ->
-      test "phase_#{phase} [#{n}] #{method} #{uri} #{code}" do
+      test (IO.inspect "phase_#{phase} [#{n}] #{method} #{uri} #{code}") do
         method = unquote method
         uri = unquote uri
         code = unquote code

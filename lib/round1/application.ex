@@ -6,12 +6,15 @@ defmodule Round1.Application do
   use Application
   import Supervisor.Spec
 
+  @port Application.get_env(:round1, :port, 80)
 
   def start(_type, _args) do
+    elli_opts = [callback: Round1.Handler, port: @port]
+
     # List all child processes to be supervised
     children = [
       supervisor(Round1.Db, []),
-      worker(Round1.Handler, []),
+      worker(:elli, [elli_opts], restart: :permanent),
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -1,68 +1,110 @@
 defmodule Round1.Handler do
   require Logger
-  use Plug.Router
+  require Record
 
-  alias Round1.Db
+  @behaviour :elli_handler
 
-  @port Application.get_env(:round1, :port, 80)
+  # Record.defrecord :req, Record.extract(:req, from_lib: "elli/include/elli.hrl")
 
-  if Application.get_env(:round1, :plug_logger, false), do: plug Plug.Logger, level: :debug
-  plug :match
-  plug :dispatch
-
-  def start_link() do
-    Logger.info "#{__MODULE__} starting"
-    {:ok, _} = Plug.Adapters.Cowboy.http(
-      __MODULE__,
-      nil,
-      port: @port
-    )
+  def handle(req, args) do
+    # Logger.debug "#{inspect req} #{inspect args}"
+    handle(:elli_request.method(req), :elli_request.path(req), req)
   end
 
-  def init(opts), do: opts
+  def handle(:GET, [], _req), do: {200, [], ""}
 
-  get "/", do: Plug.Conn.send_resp(conn, 200, "")
+  def handle(:GET, ["users", id], _req), do: fetch(:users, id)
+  def handle(:GET, ["locations", id], _req), do: fetch(:locations, id)
+  def handle(:GET, ["visits", id], _req), do: fetch(:visits, id)
+  def handle(:GET, ["users", id, "visits"], req), do: fetch_visits(id, args(req))
+  def handle(:GET, ["locations", id, "avg"], req), do: fetch_avg(id, args(req))
 
-  get "/users/:id",         do: conn |> fetch_query_params |> fetch(:users)
-  get "/locations/:id",     do: conn |> fetch_query_params |> fetch(:locations)
-  get "/visits/:id",        do: conn |> fetch_query_params |> fetch(:visits)
-  get "/users/:id/visits",  do: conn |> fetch_query_params |> fetch_visits()
-  get "/locations/:id/avg", do: conn |> fetch_query_params |> fetch_avg()
+  def handle(:POST, ["users", "new"], req), do: insert(:users, :elli_request.body(req))
+  def handle(:POST, ["locations", "new"], req), do: insert(:locations, :elli_request.body(req))
+  def handle(:POST, ["visits", "new"], req), do: insert(:visits, :elli_request.body(req))
 
-  post "/users/new",     do: conn |> insert(:users)
-  post "/locations/new", do: conn |> insert(:locations)
-  post "/visits/new",    do: conn |> insert(:visits)
+  def handle(:POST, ["users", id], req), do: update(:users, id, :elli_request.body(req))
+  def handle(:POST, ["locations", id], req), do: update(:locations, id, :elli_request.body(req))
+  def handle(:POST, ["visits", id], req), do: update(:visits, id, :elli_request.body(req))
 
-  post "/users/:id",     do: conn |> update(:users)
-  post "/locations/:id", do: conn |> update(:locations)
-  post "/visits/:id",    do: conn |> update(:visits)
+  def handle(_, _, _), do: not_found
 
-  match _, do: not_found(conn)
+  defp args(req) do
+    :elli_request.get_args(req)
+    |> Enum.map(fn {k, v} -> {String.to_atom(k), URI.decode(v)} end)
+  end
 
-  defp not_found(conn), do: Plug.Conn.send_resp(conn, 404, "not found")
-  defp bad_request(conn), do: Plug.Conn.send_resp(conn, 400, "bad request")
 
-  defp fetch(conn, type) do
-    case Integer.parse(conn.params["id"]) do
+  # post "/users/new",     do: conn |> insert(:users)
+  # post "/locations/new", do: conn |> insert(:locations)
+  # post "/visits/new",    do: conn |> insert(:visits)
+
+  # post "/users/:id",     do: conn |> update(:users)
+  # post "/locations/:id", do: conn |> update(:locations)
+  # post "/visits/:id",    do: conn |> update(:visits)
+
+  # match _, do: not_found(conn)
+
+  ### see https://github.com/knutin/elli/blob/master/src/elli_example_callback.erl
+  def handle_event(:elli_startup, [], _) do
+    Logger.info ":elli starting up"
+    :ok
+  end
+
+  def handle_event(
+    :request_complete,
+    [req, response_code, _response_headers, _response_body, t={timings, _}],
+    _) do
+    Logger.debug fn ->
+      req_time = (timings[:request_end] - timings[:request_start]) / 1000
+      send_time = (timings[:send_end] - timings[:send_start]) / 1000
+      "#{:elli_request.method(req)} #{:elli_request.path(req) |> Enum.join("/")} : #{response_code} req:#{req_time} send:#{send_time} #{inspect t}"
+    end
+    :ok
+  end
+
+  def handle_event(_event, _, _), do: :ok
+  # def handle_event(:request_throw, [_request, _exception, _stacktrace], _), do: :ok
+  # def handle_event(:request_error, [_request, _exception, _stacktrace], _), do: :ok
+  # def handle_event(:request_exit,  [_request, _exception, _stacktrace], _), do: :ok
+  # def handle_event(:invalid_return, [_request, _return_value], _), do: :ok
+  # def handle_event(:chunk_complete,
+  #   [_request, _response_code, _response_headers, _closing_end, _timings],
+  #   _), do: :ok
+  # def handle_event(:request_closed, [], _), do: :ok
+  # def handle_event(:request_timeout, [], _), do: :ok
+  # def handle_event(:request_parse_error, [_], _), do: :ok
+  # def handle_event(:client_closed, [_where], _), do: :ok
+  # def handle_event(:client_timeout, [_where], _), do: :ok
+  # def handle_event(:bad_request, [_reason], _), do: :ok
+  # def handle_event(:file_error, [_error_reason], _), do: :ok
+
+  defp not_found(), do: {404, [{"Server", "round1 (ets, jiffy, elli)"}], ""}
+  defp bad_request(), do: {400, [{"Server", "round1 (ets, jiffy, elli)"}], ""}
+  defp ok("") do
+    {200,
+     [{"Server", "round1 (ets, jiffy, elli)"},
+      {"Content-Type", "application/json"},
+      {"Connection", "close"}],
+     "{}"}
+  end
+  defp ok(data) do
+    {200,
+     [{"Server", "round1 (ets, jiffy, elli)"},
+      {"Content-Type", "application/json"}],
+     :jiffy.encode(data)}
+  end
+
+  defp fetch(type, id) do
+    case Integer.parse(id) do
       {id, ""} ->
-        case Db.get(type, id) do
-          nil -> not_found(conn)
-          item ->
-            conn
-            |> Plug.Conn.put_resp_content_type("application/json")
-            |> Plug.Conn.send_resp(200, :jiffy.encode(item))
+        case Round1.Db.get(type, id) do
+          nil -> not_found()
+          item -> ok(item)
         end
 
-      _ -> not_found(conn)
+      _ -> not_found()
     end
-  end
-
-  defp fetch_body({:ok, data, _conn}, acc), do: {:ok, acc <> data}
-  defp fetch_body({:more, data, conn}, acc), do: fetch_body(conn, acc <> data)
-  defp fetch_body(err={:error, _}), do: err
-  defp fetch_body(conn) do
-    Plug.Conn.read_body(conn, length: 1_000_000)
-    |> fetch_body("")
   end
 
   defp try_decode(str) do
@@ -78,48 +120,38 @@ defmodule Round1.Handler do
 
   end
 
-
-  defp update(conn, type) do
-    with {id, ""} <- Integer.parse(conn.params["id"]),
-         {:ok, body} <- fetch_body(conn),
+  defp update(type, id, body) do
+    with {id, ""} <- Integer.parse(id),
          {:ok, json} <- try_decode(body),
          {:ok, entity} <- Round1.Validate.validate_update(type, json) do
-      case Db.update(type, id, entity) do
-        nil -> not_found(conn)
-        :error -> bad_request(conn)
-        :ok ->
-          conn
-          |> Plug.Conn.put_resp_content_type("application/json")
-          |> Plug.Conn.send_resp(200, "{}")
+      case Round1.Db.update(type, id, entity) do
+        nil -> not_found()
+        :error -> bad_request()
+        :ok -> ok("")
       end
     else
-      _ -> bad_request(conn)
+      _ -> bad_request()
     end
   end
 
-  defp insert(conn, type) do
-    with {:ok, body} <- fetch_body(conn),
-         {:ok, json} <- try_decode(body),
+  defp insert(type, body) do
+    with {:ok, json} <- try_decode(body),
          {:ok, entity} <- Round1.Validate.validate_new(type, json) do
-      case Db.insert(type, entity.id, entity) do
-        :ok ->
-          conn
-          |> Plug.Conn.put_resp_content_type("application/json")
-          |> Plug.Conn.send_resp(200, "{}")
-
-        _ -> bad_request(conn)
+      case Round1.Db.insert(type, entity.id, entity) do
+        :ok -> ok("")
+        _ -> bad_request()
       end
     else
-      _ -> bad_request(conn)
+      _ -> bad_request()
     end
   end
 
-  defp fetch_visits(conn) do
-    with {id, ""} <- Integer.parse(conn.params["id"]),
-         {:ok, from_date} <- parse_int(conn.params["fromDate"]),
-         {:ok, to_date} <- parse_int(conn.params["toDate"]),
-         {:ok, to_distance} <- parse_int(conn.params["toDistance"]),
-         {:ok, country} <- parse_str(conn.params["country"])
+  defp fetch_visits(id, args) do
+    with {id, ""} <- Integer.parse(id),
+         {:ok, from_date} <- parse_int(args[:fromDate]),
+         {:ok, to_date} <- parse_int(args[:toDate]),
+         {:ok, to_distance} <- parse_int(args[:toDistance]),
+         {:ok, country} <- parse_str(args[:country])
       do
       opts = []
       |> Keyword.put(:from_date, from_date)
@@ -128,25 +160,21 @@ defmodule Round1.Handler do
       |> Keyword.put(:country, country)
 
       case Round1.Db.Visits.get(id, opts) do
-        nil -> not_found(conn)
-
-        v ->
-          conn
-          |> Plug.Conn.put_resp_content_type("application/json")
-          |> Plug.Conn.send_resp(200, :jiffy.encode(%{visits: v}))
+        nil -> not_found()
+        v -> ok(%{visits: v})
       end
     else
-      _ -> bad_request(conn)
+      _ -> bad_request()
     end
   end
 
-  defp fetch_avg(conn) do
-    with {id, ""} <- Integer.parse(conn.params["id"]),
-         {:ok, from_date} <- parse_int(conn.params["fromDate"]),
-         {:ok, to_date} <- parse_int(conn.params["toDate"]),
-         {:ok, from_age} <- parse_int(conn.params["fromAge"]),
-         {:ok, to_age} <- parse_int(conn.params["toAge"]),
-         {:ok, gender} <- parse_gender(conn.params["gender"])
+  defp fetch_avg(id, args) do
+    with {id, ""} <- Integer.parse(id),
+         {:ok, from_date} <- parse_int(args[:fromDate]),
+         {:ok, to_date} <- parse_int(args[:toDate]),
+         {:ok, from_age} <- parse_int(args[:fromAge]),
+         {:ok, to_age} <- parse_int(args[:toAge]),
+         {:ok, gender} <- parse_gender(args[:gender])
       do
       opts = []
       |> Keyword.put(:from_date, from_date)
@@ -156,14 +184,11 @@ defmodule Round1.Handler do
       |> Keyword.put(:gender, gender)
 
       case Round1.Db.Avg.get(id, opts) do
-        nil -> not_found(conn)
-        avg ->
-          conn
-          |> Plug.Conn.put_resp_content_type("application/json")
-          |> Plug.Conn.send_resp(200, :jiffy.encode(%{avg: avg}))
+        nil -> not_found()
+        avg -> ok(%{avg: avg})
       end
     else
-      _ -> bad_request(conn)
+      _ -> bad_request()
     end
   end
 
