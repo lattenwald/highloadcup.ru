@@ -3,6 +3,7 @@ defmodule Round1.Db.L do
   use GenServer, restart: :transient
 
   @table :locations
+  @columns ~w(id country city distance place) |> Enum.map(&String.to_atom/1)
 
   ### interface
   def start_link() do
@@ -12,7 +13,7 @@ defmodule Round1.Db.L do
 
   def get(id) do
     case :ets.lookup(@table, id) do
-      [{^id, item}] -> item
+      [item] -> from_tuple(item)
       [] -> nil
     end
   end
@@ -35,7 +36,7 @@ defmodule Round1.Db.L do
   end
 
   def handle_call({:insert, id, data}, _from, state) do
-    res = :ets.insert_new(@table, {id, data}) && :ok || :error
+    res = :ets.insert_new(@table, to_tuple(data)) && :ok || :error
     {:reply, res, state}
   end
 
@@ -46,7 +47,7 @@ defmodule Round1.Db.L do
         old ->
           case Round1.Db.merge(old, json) do
             new=%{} ->
-              :ets.insert(@table, {id, new})
+              :ets.insert(@table, to_tuple(new))
               :ok
 
             other   -> other # nil or :error
@@ -58,8 +59,9 @@ defmodule Round1.Db.L do
   ### loading
   @doc false
   def load_data(nil), do: nil
-  def load_data(data) do
-    :ets.insert(@table, Enum.map(data, & {&1.id, &1}))
-  end
+  def load_data(data), do: :ets.insert(@table, Enum.map(data, &to_tuple/1))
+
+  defp to_tuple(item=%{}), do: @columns |> Enum.map(& item[&1]) |> List.to_tuple
+  defp from_tuple(item), do: @columns |> Enum.zip(Tuple.to_list(item)) |> Enum.into(%{})
 
 end
