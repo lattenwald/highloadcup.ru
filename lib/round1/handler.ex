@@ -50,7 +50,7 @@ defmodule Round1.Handler do
           item ->
             conn
             |> Plug.Conn.put_resp_content_type("application/json")
-            |> Plug.Conn.send_resp(200, Poison.encode!(item))
+            |> Plug.Conn.send_resp(200, :jiffy.encode(item))
         end
 
       _ -> not_found(conn)
@@ -65,10 +65,24 @@ defmodule Round1.Handler do
     |> fetch_body("")
   end
 
+  defp try_decode(str) do
+    try do
+      :jiffy.decode(str, [:use_nil, :return_maps])
+    rescue
+      _ -> :error
+    catch
+      _, _ -> :error
+    else
+      res -> {:ok, res}
+    end
+
+  end
+
+
   defp update(conn, type) do
     with {id, ""} <- Integer.parse(conn.params["id"]),
          {:ok, body} <- fetch_body(conn),
-         {:ok, json} <- Poison.decode(body),
+         {:ok, json} <- try_decode(body),
          {:ok, entity} <- Round1.Validate.validate_update(type, json) do
       case Db.update(type, id, entity) do
         nil -> not_found(conn)
@@ -85,7 +99,7 @@ defmodule Round1.Handler do
 
   defp insert(conn, type) do
     with {:ok, body} <- fetch_body(conn),
-         {:ok, json} <- Poison.decode(body),
+         {:ok, json} <- try_decode(body),
          {:ok, entity} <- Round1.Validate.validate_new(type, json) do
       case Db.insert(type, entity.id, entity) do
         :ok ->
@@ -119,7 +133,7 @@ defmodule Round1.Handler do
         v ->
           conn
           |> Plug.Conn.put_resp_content_type("application/json")
-          |> Plug.Conn.send_resp(200, Poison.encode!(%{visits: v}))
+          |> Plug.Conn.send_resp(200, :jiffy.encode(%{visits: v}))
       end
     else
       _ -> bad_request(conn)
@@ -146,7 +160,7 @@ defmodule Round1.Handler do
         avg ->
           conn
           |> Plug.Conn.put_resp_content_type("application/json")
-          |> Plug.Conn.send_resp(200, Poison.encode!(%{avg: avg}))
+          |> Plug.Conn.send_resp(200, :jiffy.encode(%{avg: avg}))
       end
     else
       _ -> bad_request(conn)

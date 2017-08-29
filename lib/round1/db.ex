@@ -112,7 +112,8 @@ defmodule Round1.Db do
 
   def load_binary(data) do
     data
-    |> Poison.decode!(keys: :atoms)
+    |> :jiffy.decode([:use_nil, :return_maps])
+    |> AtomicMap.convert(safe: false, underscore: false)
     |> load_data
   end
 

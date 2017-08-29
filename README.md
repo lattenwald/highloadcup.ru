@@ -8,7 +8,7 @@ I am using [Elixir](https://elixir-lang.ru). Not actually using there Elixir-spe
 
 Data is stored in `ets`, there's some data redundancy to avoid `:ets.select`s, which are too slow. No extra caching or any hardcore optimizations.
 
-[cowboy](https://github.com/ninenines/cowboy) is doing all the serving, being helped by [Plug](https://hexdocs.pm/plug/readme.html); JSON is done with [Poison](https://github.com/devinus/poison).
+[cowboy](https://github.com/ninenines/cowboy) is doing all the serving, being helped by [Plug](https://hexdocs.pm/plug/readme.html); JSON is done with [jiffy](https://github.com/davisp/jiffy).
 
 ## Building image
 

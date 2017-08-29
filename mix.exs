@@ -24,10 +24,12 @@ defmodule Round1.Mixfile do
     [
       {:cowboy, "~> 1.1"},
       {:plug, "~> 1.4"},
-      {:poison, "~> 3.1"},
       {:timex, "~> 3.1"},
       {:distillery, "~> 1.5"},
       {:flow, "~> 0.12.0"},
+
+      {:jiffy, "~> 0.14.11"},
+      {:atomic_map, "~> 0.9.2"},
 
       {:httpoison, "~> 0.13.0", only: :test}
     ]

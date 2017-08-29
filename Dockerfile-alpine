@@ -5,7 +5,7 @@ RUN apk update
 RUN apk add -uUv erlang erlang-asn1 erlang-crypto erlang-dialyzer \
         erlang-public-key erlang-sasl erlang-ssl erlang-tools erlang-dev \
         erlang-inets erlang-syntax-tools erlang-eunit erlang-runtime-tools \
-        erlang-parsetools bash elixir
+        erlang-parsetools bash elixir gcc g++
 
 ADD . /app
 
