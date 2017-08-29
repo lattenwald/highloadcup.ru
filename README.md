@@ -8,17 +8,17 @@ I am using [Elixir](https://elixir-lang.ru). Not actually using there Elixir-spe
 
 Data is stored in `ets`, there's some data redundancy to avoid `:ets.select`s, which are too slow. No extra caching or any hardcore optimizations.
 
-[cowboy](https://github.com/ninenines/cowboy) is doing all the serving, being helped by [Plug](https://hexdocs.pm/plug/readme.html); JSON is done with [jiffy](https://github.com/davisp/jiffy).
+[elli](https://github.com/knutin/elli) is doing all the serving; JSON is done with [jiffy](https://github.com/davisp/jiffy).
 
 ## Building image
 
-Alpine
-
-    % docker build -f Dockerfile-alpine -t round1_alpine --build-arg bust="`date`" .
-
-Ubuntu, you guessed right
+Ubuntu
 
     % docker build -f Dockerfile-ubuntu -t round1_ubuntu --build-arg bust="`date`" .
+
+Alpine, you guessed right
+
+    % docker build -f Dockerfile-alpine -t round1_alpine --build-arg bust="`date`" .
 
 `bust` argument is for bumping image, you can safely omit it if code actually changed.
 
