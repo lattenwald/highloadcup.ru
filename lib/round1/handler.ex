@@ -29,17 +29,7 @@ defmodule Round1.Handler do
 
   def handle(_, _, _), do: not_found()
 
-  # post "/users/new",     do: conn |> insert(:users)
-  # post "/locations/new", do: conn |> insert(:locations)
-  # post "/visits/new",    do: conn |> insert(:visits)
-
-  # post "/users/:id",     do: conn |> update(:users)
-  # post "/locations/:id", do: conn |> update(:locations)
-  # post "/visits/:id",    do: conn |> update(:visits)
-
-  # match _, do: not_found(conn)
-
-  ### see https://github.com/knutin/elli/blob/master/src/elli_example_callback.erl
+  ### see https://github.com/knutin/elli/blob/master/src/elli_example_callback.erl for other events
   def handle_event(:elli_startup, [], _) do
     Logger.info ":elli starting up"
     :ok
@@ -61,20 +51,10 @@ defmodule Round1.Handler do
   end
 
   def handle_event(_event, _, _), do: :ok
-  # def handle_event(:request_throw, [_request, _exception, _stacktrace], _), do: :ok
-  # def handle_event(:request_error, [_request, _exception, _stacktrace], _), do: :ok
-  # def handle_event(:request_exit,  [_request, _exception, _stacktrace], _), do: :ok
-  # def handle_event(:invalid_return, [_request, _return_value], _), do: :ok
-  # def handle_event(:chunk_complete,
-  #   [_request, _response_code, _response_headers, _closing_end, _timings],
-  #   _), do: :ok
-  # def handle_event(:request_closed, [], _), do: :ok
-  # def handle_event(:request_timeout, [], _), do: :ok
-  # def handle_event(:request_parse_error, [_], _), do: :ok
-  # def handle_event(:client_closed, [_where], _), do: :ok
-  # def handle_event(:client_timeout, [_where], _), do: :ok
-  # def handle_event(:bad_request, [_reason], _), do: :ok
-  # def handle_event(:file_error, [_error_reason], _), do: :ok
+
+
+  def not_found!(), do: throw {404, [{"Server", "round1 (ets, jiffy, elli)"}], ""}
+  def bad_request!(), do: throw {400, [{"Server", "round1 (ets, jiffy, elli)"}], ""}
 
   defp not_found(), do: {404, [{"Server", "round1 (ets, jiffy, elli)"}], ""}
   defp bad_request(), do: {400, [{"Server", "round1 (ets, jiffy, elli)"}], ""}
@@ -93,13 +73,12 @@ defmodule Round1.Handler do
   end
 
   defp fetch(type, id) do
-    case Integer.parse(id) do
-      {id, ""} ->
-        case Round1.Db.get(type, id) do
-          nil -> not_found()
-          item -> ok(item)
-        end
-
+    with {id, ""} <- Integer.parse(id) do
+      case Round1.Db.get(type, id) do
+        nil -> not_found!()
+        item -> ok(item)
+      end
+    else
       _ -> not_found()
     end
   end
